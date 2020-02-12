@@ -1,0 +1,42 @@
+---
+- hosts: servers
+  vars_files:
+    - vars.yml
+  gather_facts: false
+  become: yes
+
+  tasks:
+    - name: Install system packages
+      apt: pkg={{ item }} update-cache=yes
+      with_items: "{{ system_packages }}"
+
+    - name: Create directory for app
+      file: path={{ install_root }}/{{ project_name }} state=directory
+   
+    - name : install php
+      apt: name={{ item }} update_cache=yes state=latest
+      with_item:
+        - php-cli
+        - php-curl
+        - php-fpm
+        - php-intl
+        - php-json
+        - php-mcrypt
+        - php-sqlite
+    - name: ensure php-fpm cgi.fix_pathinfo=0
+      lineinfile: dest=/etc/php/fpm/php.ini regexp='^(.*)cgi.fix_pathinfo=' line=cgi.fix_pathinfo=0
+      notify:
+        - restart php-fpm
+        - restart nginx
+
+    handlers:
+      - name: restart php-fpm
+        service: name=php-fpm state=restarted
+
+      - name: restart nginx
+        service: name=nginx state=restarted          
+                    
+
+- include: deploy.yml
+
+# vim:ft=ansible:
